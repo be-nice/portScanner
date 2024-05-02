@@ -3,42 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"strconv"
 	"sync"
-	"time"
 
-	"github.com/fatih/color"
+	"portscan/scanner"
+	util "portscan/utility"
 )
-
-type Scan struct {
-	ip        string
-	startPort string
-	endPort   string
-}
-
-var commmonPorts = map[string]string{
-	"20":   "FTP",
-	"21":   "FTP control",
-	"22":   "SSH",
-	"23":   "Telnet",
-	"25":   "SMTP",
-	"53":   "DNS",
-	"80":   "HTTP",
-	"110":  "POP3",
-	"143":  "IMAP",
-	"443":  "HTTPS",
-	"465":  "SMTPS",
-	"591":  "HTTP alternate",
-	"993":  "IMAPS",
-	"995":  "POP3S",
-	"3306": "MySQL",
-	"5432": "PostgreSQL",
-	"8008": "HTTP alternate",
-	"8080": "HTTP alternate",
-	"8443": "HTTPS alternate",
-}
 
 func main() {
 	wg := sync.WaitGroup{}
@@ -48,87 +19,56 @@ func main() {
 		fmt.Println(err)
 		os.Exit(0)
 	}
-	sPort, err := strconv.Atoi(scan.startPort)
+	sPort, err := strconv.Atoi(scan.StartPort)
 	if err != nil {
 		panic(err)
 	}
-	ePort, err := strconv.Atoi(scan.endPort)
+	ePort, err := strconv.Atoi(scan.EndPort)
 	if err != nil {
 		panic(err)
 	}
-
 	for i := sPort; i <= ePort; i++ {
 		wg.Add(1)
-		go func() {
+		go func(port int) {
 			defer wg.Done()
-			scan.startPort = strconv.Itoa(i)
-			scanPorts(scan)
-		}()
+			scan.StartPort = strconv.Itoa(port)
+			scanner.ScanPorts(scan)
+		}(i)
 	}
 	wg.Wait()
 }
 
-func validateArgs() (Scan, error) {
+func validateArgs() (util.Scan, error) {
 	if len(os.Args) < 2 {
-		return Scan{}, errors.New("no arguments provided")
+		return util.Scan{}, errors.New("no arguments provided")
 	}
 
 	ip := os.Args[1]
-	if !validIP(ip) {
-		return Scan{}, errors.New("invalid IP address")
+	if !util.ValidIP(ip) {
+		return util.Scan{}, errors.New("invalid IP address")
 	}
 
 	if len(os.Args) == 2 {
-		return Scan{ip, "1", "65535"}, nil
+		return util.Scan{IP: ip, StartPort: "1", EndPort: "65535"}, nil
 	}
 
 	if len(os.Args) != 3 && len(os.Args) != 4 {
-		return Scan{}, errors.New("invalid number of arguments")
+		return util.Scan{}, errors.New("invalid number of arguments")
 	}
 
 	startPort := os.Args[2]
-	if !validPort(startPort) {
-		return Scan{}, errors.New("invalid start port")
+	if !util.ValidPort(startPort) {
+		return util.Scan{}, errors.New("invalid start port")
 	}
 
 	if len(os.Args) == 3 {
-		return Scan{ip, startPort, startPort}, nil
+		return util.Scan{IP: ip, StartPort: startPort, EndPort: startPort}, nil
 	}
 
 	endPort := os.Args[3]
-	if !validPort(endPort) {
-		return Scan{}, errors.New("invalid end port")
+	if !util.ValidPort(endPort) {
+		return util.Scan{}, errors.New("invalid end port")
 	}
 
-	return Scan{ip, startPort, endPort}, nil
-}
-
-func scanPorts(scan Scan) {
-	conn, err := net.DialTimeout("tcp", scan.ip+":"+scan.startPort, 2*time.Second)
-	if err != nil {
-		return
-	} else {
-		if val, ok := commmonPorts[scan.startPort]; ok {
-			str := fmt.Sprintf("Port %s is open | (%s)", scan.startPort, val)
-			color.Green(str)
-		} else {
-			fmt.Println("Port", scan.startPort, "is open")
-		}
-		conn.Close()
-	}
-}
-
-func validIP(ip string) bool {
-	return net.ParseIP(ip) != nil
-}
-
-func validPort(port string) bool {
-	_, err := strconv.Atoi(port)
-	if err != nil {
-		return false
-	}
-	if port <= "0" || port > "65535" {
-		return false
-	}
-	return true
+	return util.Scan{IP: ip, StartPort: startPort, EndPort: endPort}, nil
 }
