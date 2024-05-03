@@ -15,8 +15,8 @@ func ScanPorts(scan util.Scan) {
 	if err != nil {
 		return
 	} else {
-		if val, ok := util.CommmonPorts[scan.StartPort]; ok {
-			str := fmt.Sprintf("Port %s is open | (%s)", scan.StartPort, val)
+		if scan.Service != "" {
+			str := fmt.Sprintf("Port %s is open | (%s)", scan.StartPort, scan.Service)
 			color.Green(str)
 		} else {
 			fmt.Println("Port", scan.StartPort, "is open")
