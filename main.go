@@ -53,7 +53,11 @@ func main() {
 			panic(err)
 		}
 		for i := sPort; i <= ePort; i++ {
-			scan.StartPort = strconv.Itoa(i)
+			port := strconv.Itoa(i)
+			if val, ok := portMap[port]; ok {
+				scan.Service = val
+			}
+			scan.StartPort = port
 			wg.Add(1)
 			go write(scan, &wg)
 		}
