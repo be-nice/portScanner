@@ -11,7 +11,11 @@ import (
 
 	"portscan/scanner"
 	util "portscan/utility"
+
+	"github.com/fatih/color"
 )
+
+var portMap = make(map[string]string)
 
 func main() {
 	wg := sync.WaitGroup{}
@@ -21,24 +25,23 @@ func main() {
 		fmt.Println(err)
 		os.Exit(0)
 	}
+	file , err := os.Open("portlist.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	scanb := bufio.NewScanner(file)
+	for scanb.Scan() {
+		str := strings.Fields(scanb.Text())
+		portMap[strings.Split(str[1], "/")[0]] = str[0]
+	}
 	if scan.DefaultScan {
-		file, err := os.Open("portlist.txt")
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
-		scanb := bufio.NewScanner(file)
-		for scanb.Scan() {
-			s := scanb.Text()
-			str := strings.Split(s, "	")
-			x := strings.Split(str[1], "/")
-			scan.StartPort = x[0]
-			scan.Service = str[0]
+		for key, val := range portMap {
+			scan.StartPort = key
+			scan.Service = val
 			wg.Add(1)
-			go func(scanO util.Scan) {
-				defer wg.Done()
-				scanner.ScanPorts(scanO)
-			}(scan)
+			go write(scan, &wg)
 		}
 	} else {
 		sPort, err := strconv.Atoi(scan.StartPort)
@@ -50,15 +53,26 @@ func main() {
 			panic(err)
 		}
 		for i := sPort; i <= ePort; i++ {
+			scan.StartPort = strconv.Itoa(i)
 			wg.Add(1)
-			go func(port int) {
-				defer wg.Done()
-				scan.StartPort = strconv.Itoa(port)
-				scanner.ScanPorts(scan)
-			}(i)
+			go write(scan, &wg)
 		}
 	}
 	wg.Wait()
+}
+
+func write(scan util.Scan, wg *sync.WaitGroup) {
+	defer wg.Done()
+	err := scanner.ScanPorts(scan)
+	if err != nil {
+		return
+	}
+	if scan.Service != "" {
+		str := fmt.Sprintf("Port %s is open | (%s)", scan.StartPort, scan.Service)
+		color.Green(str)
+	} else {
+		fmt.Println("Port", scan.StartPort, "is open")
+	}
 }
 
 func validateArgs() (util.Scan, error) {
