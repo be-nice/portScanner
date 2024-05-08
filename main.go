@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"portscan/memo"
 	"portscan/scanner"
 	util "portscan/utility"
 
@@ -16,16 +17,16 @@ import (
 )
 
 var portMap = make(map[string]string)
+var wg sync.WaitGroup
 
 func main() {
-	wg := sync.WaitGroup{}
-
 	scan, err := validateArgs()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(0)
 	}
-	file , err := os.Open("portlist.txt")
+	fmt.Println("made 3")
+	file, err := os.Open("portlist.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -41,7 +42,7 @@ func main() {
 			scan.StartPort = key
 			scan.Service = val
 			wg.Add(1)
-			go write(scan, &wg)
+			go write(scan)
 		}
 	} else {
 		sPort, err := strconv.Atoi(scan.StartPort)
@@ -59,13 +60,13 @@ func main() {
 			}
 			scan.StartPort = port
 			wg.Add(1)
-			go write(scan, &wg)
+			go write(scan)
 		}
 	}
 	wg.Wait()
 }
 
-func write(scan util.Scan, wg *sync.WaitGroup) {
+func write(scan util.Scan) {
 	defer wg.Done()
 	err := scanner.ScanPorts(scan)
 	if err != nil {
@@ -95,6 +96,10 @@ func validateArgs() (util.Scan, error) {
 
 	if len(os.Args) != 3 && len(os.Args) != 4 {
 		return util.Scan{}, errors.New("invalid number of arguments")
+	}
+	if len(os.Args) == 3 && os.Args[2] == "-t" {
+		memo.GetMemo(os.Args[1])
+		os.Exit(0)
 	}
 
 	startPort := os.Args[2]
