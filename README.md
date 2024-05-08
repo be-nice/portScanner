@@ -17,7 +17,7 @@ To use the Port Scanner, follow these steps:
 
 3. Build the project:
 
-4. Run the scanner with the desired IP address and port range. If no port range is provided, it defaults to scanning ports 1 through 65535.  
+4. Run the scanner with the desired IP address and port range. If no port range is provided, it defaults to scanning 1000 most common open ports according to nmap.  
 If only one port is provided, then it scans that one port only:
 ```bash
 ./portscan <IP_address> [<start_port> [<end_port>]]
@@ -29,6 +29,17 @@ Example:
 ```
 
 This command will scan ports 1 through 1000 on the IP address `192.168.1.1`.
+
+## Port configuration testing
+
+Port scanner supports sqlite database to store expected port configuration for an ip.  
+Schema is. ip | port | status  
+where both ip and port are desired strings, and status is either "open" or "closed", depending on if you expect the port to be open or closed.  
+Running the tool with ip and -t flag tests only the ports defined in the database.
+
+```bash
+./portscan 127.0.0.1 -t
+```
 
 ## Contributing
 
