@@ -11,6 +11,19 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+func ValidateDB() {
+	db, err := sql.Open("sqlite3", "database.db")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec("CREATE TABLE IF NOT EXISTS lookup (ip text, port text, status text)")
+	if err != nil {
+		panic(err)
+	}
+}
+
 func GetMemo(ip string) {
 	memoMap := make(map[string]string)
 	readDb(ip, &memoMap)
@@ -40,9 +53,39 @@ func GetMemo(ip string) {
 	if tesStatus {
 		color.Green("SUCCESS, All tests passed")
 	} else {
-		color.Red("Fail | All tests did not pass")
+		color.Red("FAIL | Test failed")
 	}
 
+}
+
+func CreateMemo(args []string) {
+	db, err := sql.Open("sqlite3", "database.db")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	_, err = db.Exec("INSERT INTO lookup (ip, port, status) VALUES (?, ?, ?)", args[0], args[1], args[2])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func UpdateMemo(args []string) {
+	db, err := sql.Open("sqlite3", "database.db")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	_, err = db.Exec("UPDATE lookup SET status=? WHERE ip=? AND port=?", args[2], args[0], args[1])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
 
 func readDb(ip string, memoMap *map[string]string) {
@@ -52,7 +95,7 @@ func readDb(ip string, memoMap *map[string]string) {
 		os.Exit(1)
 	}
 
-	rows, err := db.Query("select port, status from lookup where ip=?", ip)
+	rows, err := db.Query("SELECT port, status FROM lookup WHERE ip=?", ip)
 	db.Close()
 	if err != nil {
 		fmt.Println(err)
