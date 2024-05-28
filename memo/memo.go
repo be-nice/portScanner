@@ -88,6 +88,36 @@ func UpdateMemo(args []string) {
 	}
 }
 
+func DeletePort(args []string) {
+	db, err := sql.Open("sqlite3", "database.db")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	_, err = db.Exec("DELETE FROM lookup WHERE ip=? AND port=?", args[0], args[1])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func DeleteIP(ip string) {
+	db, err := sql.Open("sqlite3", "database.db")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	_, err = db.Exec("DELETE FROM lookup WHERE ip=?", ip)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
 func readDb(ip string, memoMap *map[string]string) {
 	db, err := sql.Open("sqlite3", "database.db")
 	if err != nil {

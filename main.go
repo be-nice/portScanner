@@ -125,6 +125,13 @@ func validateArgs() (util.Scan, error) {
 		case "-e": // edit db entry
 			memo.UpdateMemo(args[1:])
 			os.Exit(0)
+		case "-d":
+			if len(args) > 2 {
+				memo.DeletePort(args[1:])
+			} else {
+				memo.DeleteIP(args[1])
+			}
+			os.Exit(0)
 		default:
 			return util.Scan{}, errors.New("invalid flag")
 		}
