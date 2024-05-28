@@ -18,9 +18,16 @@ import (
 
 var portMap = make(map[string]string)
 var wg sync.WaitGroup
+var client *memo.DBClient
 
 func init() {
-	memo.ValidateDB()
+	var err error
+	client, err = memo.NewDBClient("database.db")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	memo.ValidateDB(client)
 }
 
 func main() {
@@ -117,19 +124,19 @@ func validateArgs() (util.Scan, error) {
 		}
 		switch args[0] {
 		case "-t": // run tests
-			memo.GetMemo(args[1])
+			memo.GetMemo(client, args[1])
 			os.Exit(0)
 		case "-c": // create db entry
-			memo.CreateMemo(args[1:])
+			memo.CreateMemo(client, args[1:])
 			os.Exit(0)
 		case "-e": // edit db entry
-			memo.UpdateMemo(args[1:])
+			memo.UpdateMemo(client, args[1:])
 			os.Exit(0)
 		case "-d":
 			if len(args) > 2 {
-				memo.DeletePort(args[1:])
+				memo.DeletePort(client, args[1:])
 			} else {
-				memo.DeleteIP(args[1])
+				memo.DeleteIP(client, args[1])
 			}
 			os.Exit(0)
 		default:

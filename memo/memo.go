@@ -11,22 +11,54 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func ValidateDB() {
-	db, err := sql.Open("sqlite3", "database.db")
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
+// DB interface for database operations
+type DB interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Close() error
+}
 
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS lookup (ip text, port text, status text)")
+// DBClient struct to hold the database connection
+type DBClient struct {
+	db *sql.DB
+}
+
+// NewDBClient initializes and returns a new DBClient
+func NewDBClient(dataSourceName string) (*DBClient, error) {
+	db, err := sql.Open("sqlite3", dataSourceName)
+	if err != nil {
+		return nil, err
+	}
+	return &DBClient{db: db}, nil
+}
+
+// Exec executes a query without returning any rows
+func (client *DBClient) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return client.db.Exec(query, args...)
+}
+
+// Query executes a query that returns rows
+func (client *DBClient) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return client.db.Query(query, args...)
+}
+
+// Close closes the database connection
+func (client *DBClient) Close() error {
+	return client.db.Close()
+}
+
+// ValidateDB ensures the lookup table exists
+func ValidateDB(client DB) {
+	_, err := client.Exec("CREATE TABLE IF NOT EXISTS lookup (ip text, port text, status text)")
 	if err != nil {
 		panic(err)
 	}
 }
 
-func GetMemo(ip string) {
+// GetMemo retrieves and scans ports from the database
+func GetMemo(client DB, ip string) {
 	memoMap := make(map[string]string)
-	readDb(ip, &memoMap)
+	readDb(client, ip, &memoMap)
 	var status string
 	tesStatus := true
 	for key, val := range memoMap {
@@ -55,62 +87,52 @@ func GetMemo(ip string) {
 	} else {
 		color.Red("FAIL | Test failed")
 	}
-
 }
 
-func CreateMemo(args []string) {
-	db := openDB()
-	defer db.Close()
-
-	_, err := db.Exec("INSERT INTO lookup (ip, port, status) VALUES (?, ?, ?)", args[0], args[1], args[2])
+// CreateMemo inserts a new record into the database
+func CreateMemo(client DB, args []string) {
+	_, err := client.Exec("INSERT INTO lookup (ip, port, status) VALUES (?, ?, ?)", args[0], args[1], args[2])
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-func UpdateMemo(args []string) {
-	db := openDB()
-	defer db.Close()
-
-	_, err := db.Exec("UPDATE lookup SET status=? WHERE ip=? AND port=?", args[2], args[0], args[1])
+// UpdateMemo updates an existing record in the database
+func UpdateMemo(client DB, args []string) {
+	_, err := client.Exec("UPDATE lookup SET status=? WHERE ip=? AND port=?", args[2], args[0], args[1])
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-func DeletePort(args []string) {
-	db := openDB()
-	defer db.Close()
-
-	_, err := db.Exec("DELETE FROM lookup WHERE ip=? AND port=?", args[0], args[1])
+// DeletePort deletes a port record from the database
+func DeletePort(client DB, args []string) {
+	_, err := client.Exec("DELETE FROM lookup WHERE ip=? AND port=?", args[0], args[1])
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-func DeleteIP(ip string) {
-	db := openDB()
-	defer db.Close()
-
-	_, err := db.Exec("DELETE FROM lookup WHERE ip=?", ip)
+// DeleteIP deletes all records for a given IP from the database
+func DeleteIP(client DB, ip string) {
+	_, err := client.Exec("DELETE FROM lookup WHERE ip=?", ip)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-func readDb(ip string, memoMap *map[string]string) {
-	db := openDB()
-
-	rows, err := db.Query("SELECT port, status FROM lookup WHERE ip=?", ip)
-	db.Close()
+// readDb reads records from the database into a map
+func readDb(client DB, ip string, memoMap *map[string]string) {
+	rows, err := client.Query("SELECT port, status FROM lookup WHERE ip=?", ip)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	defer rows.Close()
 
 	var port string
 	var val string
@@ -118,15 +140,4 @@ func readDb(ip string, memoMap *map[string]string) {
 		rows.Scan(&port, &val)
 		(*memoMap)[port] = val
 	}
-	defer rows.Close()
-	db.Close()
-}
-
-func openDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "database.db")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	return db
 }
