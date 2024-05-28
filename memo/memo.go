@@ -59,14 +59,10 @@ func GetMemo(ip string) {
 }
 
 func CreateMemo(args []string) {
-	db, err := sql.Open("sqlite3", "database.db")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	db := openDB()
 	defer db.Close()
 
-	_, err = db.Exec("INSERT INTO lookup (ip, port, status) VALUES (?, ?, ?)", args[0], args[1], args[2])
+	_, err := db.Exec("INSERT INTO lookup (ip, port, status) VALUES (?, ?, ?)", args[0], args[1], args[2])
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -74,14 +70,10 @@ func CreateMemo(args []string) {
 }
 
 func UpdateMemo(args []string) {
-	db, err := sql.Open("sqlite3", "database.db")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	db := openDB()
 	defer db.Close()
 
-	_, err = db.Exec("UPDATE lookup SET status=? WHERE ip=? AND port=?", args[2], args[0], args[1])
+	_, err := db.Exec("UPDATE lookup SET status=? WHERE ip=? AND port=?", args[2], args[0], args[1])
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -89,14 +81,10 @@ func UpdateMemo(args []string) {
 }
 
 func DeletePort(args []string) {
-	db, err := sql.Open("sqlite3", "database.db")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	db := openDB()
 	defer db.Close()
 
-	_, err = db.Exec("DELETE FROM lookup WHERE ip=? AND port=?", args[0], args[1])
+	_, err := db.Exec("DELETE FROM lookup WHERE ip=? AND port=?", args[0], args[1])
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -104,14 +92,10 @@ func DeletePort(args []string) {
 }
 
 func DeleteIP(ip string) {
-	db, err := sql.Open("sqlite3", "database.db")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	db := openDB()
 	defer db.Close()
 
-	_, err = db.Exec("DELETE FROM lookup WHERE ip=?", ip)
+	_, err := db.Exec("DELETE FROM lookup WHERE ip=?", ip)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -119,11 +103,7 @@ func DeleteIP(ip string) {
 }
 
 func readDb(ip string, memoMap *map[string]string) {
-	db, err := sql.Open("sqlite3", "database.db")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	db := openDB()
 
 	rows, err := db.Query("SELECT port, status FROM lookup WHERE ip=?", ip)
 	db.Close()
@@ -139,4 +119,14 @@ func readDb(ip string, memoMap *map[string]string) {
 		(*memoMap)[port] = val
 	}
 	defer rows.Close()
+	db.Close()
+}
+
+func openDB() *sql.DB {
+	db, err := sql.Open("sqlite3", "database.db")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return db
 }
