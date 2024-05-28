@@ -37,7 +37,7 @@ func main() {
 		fmt.Println("type 'help' to see usage")
 		os.Exit(0)
 	}
-	fmt.Println("made 3")
+
 	file, err := os.Open("portlist.txt")
 	if err != nil {
 		panic(err)
